@@ -63,7 +63,7 @@ void *_alloca(size_t size);
 #endif /* _V_IFDEFJAIL_H_ */
 
 #ifdef HAVE_ALLOCA_H
-#  include <alloca.h>
+#  include <malloc.h>
 #endif
 
 #ifdef USE_MEMORY_H

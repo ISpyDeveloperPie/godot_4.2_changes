@@ -25,7 +25,7 @@
 #ifdef _WIN32
     #include <malloc.h>
 #elif defined(__linux__)
-    #include <alloca.h>
+    #include <malloc.h>
 #else
     #include <stdlib.h>
 #endif

@@ -28,7 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#include <alloca.h>
+#include <malloc.h>
 
 #define OPENGL_INCLUDE_H "thirdparty/glad/glad/gl.h"
 #define PTHREAD_RENAME_SELF

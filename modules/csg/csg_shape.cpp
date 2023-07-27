@@ -63,6 +63,25 @@ void CSGShape3D::set_use_collision(bool p_enable) {
 	notify_property_list_changed();
 }
 
+void CSGShape3D::set_use_self_mesh(bool p_enable)
+{
+	if (use_self_mesh == p_enable) {
+		return;
+	}
+
+	use_self_mesh = p_enable;
+
+	if (is_root_shape()) {
+		return;
+	}
+	notify_property_list_changed();
+}
+
+bool CSGShape3D::is_using_self_mesh() const
+{
+	return use_self_mesh;
+}
+
 bool CSGShape3D::is_using_collision() const {
 	return use_collision;
 }
@@ -292,12 +311,15 @@ void CSGShape3D::mikktSetTSpaceDefault(const SMikkTSpaceContext *pContext, const
 }
 
 void CSGShape3D::_update_shape() {
-	if (!is_root_shape()) {
-		return;
+	if (!is_root_shape() && !is_using_self_mesh()) {
+		return; // TODO: Edit this for like a boolean to save maybe?
 	}
 
-	set_base(RID());
-	root_mesh.unref(); //byebye root mesh
+	if (is_root_shape()) {
+		set_base(RID());
+		root_mesh.unref(); //byebye root mesh
+	}
+	self_mesh.unref();
 
 	CSGBrush *n = _get_brush();
 	ERR_FAIL_COND_MSG(!n, "Cannot get CSGBrush.");
@@ -408,7 +430,10 @@ void CSGShape3D::_update_shape() {
 		}
 	}
 
-	root_mesh.instantiate();
+	if (is_root_shape()) {
+		root_mesh.instantiate();
+	}
+	self_mesh.instantiate();
 	//create surfaces
 
 	for (int i = 0; i < surfaces.size(); i++) {
@@ -445,14 +470,22 @@ void CSGShape3D::_update_shape() {
 			array[Mesh::ARRAY_TANGENT] = surfaces[i].tans;
 		}
 
-		int idx = root_mesh->get_surface_count();
-		root_mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, array);
-		root_mesh->surface_set_material(idx, surfaces[i].material);
+		if (is_root_shape()) {
+			int idx = root_mesh->get_surface_count();
+			root_mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, array);
+			root_mesh->surface_set_material(idx, surfaces[i].material);
+		}
+
+		int idx_self = self_mesh->get_surface_count();
+		self_mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, array);
+		self_mesh->surface_set_material(idx_self, surfaces[i].material);
 	}
 
-	set_base(root_mesh->get_rid());
+	if (is_root_shape()) {
+		set_base(root_mesh->get_rid());
 
-	_update_collision_faces();
+		_update_collision_faces();
+	}
 }
 
 void CSGShape3D::_update_collision_faces() {
@@ -645,6 +678,10 @@ void CSGShape3D::_validate_property(PropertyInfo &p_property) const {
 	} else if (is_collision_prefixed && !bool(get("use_collision"))) {
 		p_property.usage = PROPERTY_USAGE_NO_EDITOR;
 	}
+	if (p_property.name.begins_with("use_self_mesh") && (!is_inside_tree() || is_root_shape()))
+	{
+		p_property.usage = PROPERTY_USAGE_NO_EDITOR;
+	}
 }
 
 Array CSGShape3D::get_meshes() const {
@@ -653,6 +690,14 @@ Array CSGShape3D::get_meshes() const {
 		arr.resize(2);
 		arr[0] = Transform3D();
 		arr[1] = root_mesh;
+		return arr;
+	}
+	else
+	{
+		Array arr;
+		arr.resize(2);
+		arr[0] = Transform3D();
+		arr[1] = self_mesh;
 		return arr;
 	}
 
@@ -671,6 +716,9 @@ void CSGShape3D::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_use_collision", "operation"), &CSGShape3D::set_use_collision);
 	ClassDB::bind_method(D_METHOD("is_using_collision"), &CSGShape3D::is_using_collision);
+
+	ClassDB::bind_method(D_METHOD("set_use_self_mesh", "operation"), &CSGShape3D::set_use_self_mesh);
+	ClassDB::bind_method(D_METHOD("is_using_self_mesh"), &CSGShape3D::is_using_self_mesh);
 
 	ClassDB::bind_method(D_METHOD("set_collision_layer", "layer"), &CSGShape3D::set_collision_layer);
 	ClassDB::bind_method(D_METHOD("get_collision_layer"), &CSGShape3D::get_collision_layer);
@@ -691,10 +739,11 @@ void CSGShape3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_calculating_tangents"), &CSGShape3D::is_calculating_tangents);
 
 	ClassDB::bind_method(D_METHOD("get_meshes"), &CSGShape3D::get_meshes);
-
+	
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "operation", PROPERTY_HINT_ENUM, "Union,Intersection,Subtraction"), "set_operation", "get_operation");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "snap", PROPERTY_HINT_RANGE, "0.000001,1,0.000001,suffix:m"), "set_snap", "get_snap");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "calculate_tangents"), "set_calculate_tangents", "is_calculating_tangents");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_self_mesh"), "set_use_self_mesh", "is_using_self_mesh");
 
 	ADD_GROUP("Collision", "collision_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_collision"), "set_use_collision", "is_using_collision");

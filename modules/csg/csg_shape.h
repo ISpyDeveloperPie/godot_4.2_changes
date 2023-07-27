@@ -63,6 +63,7 @@ private:
 	float snap = 0.001;
 
 	bool use_collision = false;
+	bool use_self_mesh = false;
 	uint32_t collision_layer = 1;
 	uint32_t collision_mask = 1;
 	real_t collision_priority = 1.0;
@@ -74,6 +75,7 @@ private:
 	bool calculate_tangents = true;
 
 	Ref<ArrayMesh> root_mesh;
+	Ref<ArrayMesh> self_mesh;
 
 	struct Vector3Hasher {
 		_ALWAYS_INLINE_ uint32_t hash(const Vector3 &p_vec3) const {
@@ -138,6 +140,8 @@ public:
 
 	void set_use_collision(bool p_enable);
 	bool is_using_collision() const;
+	void set_use_self_mesh(bool p_enable);
+	bool is_using_self_mesh() const;
 
 	void set_collision_layer(uint32_t p_layer);
 	uint32_t get_collision_layer() const;
