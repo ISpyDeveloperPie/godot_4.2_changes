@@ -188,6 +188,8 @@ void CSGShape3D::_make_dirty(bool p_parent_removing) {
 		call_deferred(SNAME("_update_shape"));
 	}
 
+	print_line("FOR THE LOVE OF GOD WORK!!!!:	" + get_name());
+
 	dirty = true;
 }
 
@@ -263,12 +265,14 @@ CSGBrush *CSGShape3D::_get_brush() {
 		dirty = false;
 	}
 
+	print_line("AAAAAAAAAAAAAAA!!!!:	" + get_name());
+
 	return brush;
 }
 
 int CSGShape3D::mikktGetNumFaces(const SMikkTSpaceContext *pContext) {
 	ShapeUpdateSurface &surface = *((ShapeUpdateSurface *)pContext->m_pUserData);
-
+	print_line("CCCCCCCCCCCCCCCCCCC!!!!:	");
 	return surface.vertices.size() / 3;
 }
 
