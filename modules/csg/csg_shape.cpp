@@ -82,6 +82,16 @@ bool CSGShape3D::is_using_self_mesh() const
 	return use_self_mesh;
 }
 
+void CSGShape3D::set_use_signal_on_update(bool p_enable) 
+{
+	use_signal_on_update = p_enable;
+}
+
+bool CSGShape3D::is_using_signal_on_update() const 
+{
+	return use_signal_on_update;
+}
+
 bool CSGShape3D::is_using_collision() const {
 	return use_collision;
 }
@@ -312,7 +322,7 @@ void CSGShape3D::mikktSetTSpaceDefault(const SMikkTSpaceContext *pContext, const
 
 void CSGShape3D::_update_shape() {
 	if (!is_root_shape() && !is_using_self_mesh()) {
-		return; // TODO: Edit this for like a boolean to save maybe?
+		return;
 	}
 
 	if (is_root_shape()) {
@@ -485,6 +495,11 @@ void CSGShape3D::_update_shape() {
 		set_base(root_mesh->get_rid());
 
 		_update_collision_faces();
+	}
+
+	if(is_using_signal_on_update())
+	{
+		emit_signal(SNAME("mesh_updated"));
 	}
 }
 
@@ -720,6 +735,9 @@ void CSGShape3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_use_self_mesh", "operation"), &CSGShape3D::set_use_self_mesh);
 	ClassDB::bind_method(D_METHOD("is_using_self_mesh"), &CSGShape3D::is_using_self_mesh);
 
+	ClassDB::bind_method(D_METHOD("set_use_signal_on_update", "operation"), &CSGShape3D::set_use_signal_on_update);
+	ClassDB::bind_method(D_METHOD("is_using_signal_on_update"), &CSGShape3D::is_using_signal_on_update);
+
 	ClassDB::bind_method(D_METHOD("set_collision_layer", "layer"), &CSGShape3D::set_collision_layer);
 	ClassDB::bind_method(D_METHOD("get_collision_layer"), &CSGShape3D::get_collision_layer);
 
@@ -739,11 +757,14 @@ void CSGShape3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_calculating_tangents"), &CSGShape3D::is_calculating_tangents);
 
 	ClassDB::bind_method(D_METHOD("get_meshes"), &CSGShape3D::get_meshes);
+
+	ADD_SIGNAL(MethodInfo("mesh_updated"));
 	
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "operation", PROPERTY_HINT_ENUM, "Union,Intersection,Subtraction"), "set_operation", "get_operation");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "snap", PROPERTY_HINT_RANGE, "0.000001,1,0.000001,suffix:m"), "set_snap", "get_snap");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "calculate_tangents"), "set_calculate_tangents", "is_calculating_tangents");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_self_mesh"), "set_use_self_mesh", "is_using_self_mesh");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_sinal_on_update"), "set_use_signal_on_update", "is_using_signal_on_update");
 
 	ADD_GROUP("Collision", "collision_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_collision"), "set_use_collision", "is_using_collision");

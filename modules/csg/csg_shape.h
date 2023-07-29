@@ -64,6 +64,7 @@ private:
 
 	bool use_collision = false;
 	bool use_self_mesh = false;
+	bool use_signal_on_update = false;
 	uint32_t collision_layer = 1;
 	uint32_t collision_mask = 1;
 	real_t collision_priority = 1.0;
@@ -142,6 +143,9 @@ public:
 	bool is_using_collision() const;
 	void set_use_self_mesh(bool p_enable);
 	bool is_using_self_mesh() const;
+
+	void set_use_signal_on_update(bool p_enable);
+	bool is_using_signal_on_update() const;
 
 	void set_collision_layer(uint32_t p_layer);
 	uint32_t get_collision_layer() const;
