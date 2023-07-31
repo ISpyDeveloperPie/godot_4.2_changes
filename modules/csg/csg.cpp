@@ -280,12 +280,26 @@ void CSGBrush::copy_from(const CSGBrush &p_brush, const Transform3D &p_xform) {
 
 // CSGBrushOperation
 
+// CSG Check for Intersections
+bool CSGBrushOperation::is_intersecting(const CSGBrush &p_brush_a, const CSGBrush &p_brush_b) 
+{
+	for (int i = 0; i < p_brush_a.faces.size(); i++) {
+		for (int j = 0; j < p_brush_b.faces.size(); j++) {
+			if (p_brush_a.faces[i].aabb.intersects_inclusive(p_brush_b.faces[j].aabb)) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 void CSGBrushOperation::merge_brushes(Operation p_operation, const CSGBrush &p_brush_a, const CSGBrush &p_brush_b, CSGBrush &r_merged_brush, float p_vertex_snap) {
 	// Check for face collisions and add necessary faces.
 	Build2DFaceCollection build2DFaceCollection;
 	for (int i = 0; i < p_brush_a.faces.size(); i++) {
 		for (int j = 0; j < p_brush_b.faces.size(); j++) {
 			if (p_brush_a.faces[i].aabb.intersects_inclusive(p_brush_b.faces[j].aabb)) {
+				//// print_line("HUHHUHUHU WERIRIED");
 				update_faces(p_brush_a, i, p_brush_b, j, build2DFaceCollection, p_vertex_snap);
 			}
 		}
