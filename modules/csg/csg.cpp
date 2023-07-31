@@ -33,6 +33,7 @@
 #include "core/math/geometry_2d.h"
 #include "core/math/math_funcs.h"
 #include "core/templates/sort_array.h"
+#include "scene/main/node.h"
 
 // Static helper functions.
 
@@ -293,13 +294,16 @@ bool CSGBrushOperation::is_intersecting(const CSGBrush &p_brush_a, const CSGBrus
 	return false;
 }
 
-void CSGBrushOperation::merge_brushes(Operation p_operation, const CSGBrush &p_brush_a, const CSGBrush &p_brush_b, CSGBrush &r_merged_brush, float p_vertex_snap) {
+void CSGBrushOperation::merge_brushes(Operation p_operation, const CSGBrush &p_brush_a, const CSGBrush &p_brush_b, CSGBrush &r_merged_brush, float p_vertex_snap, Node* calling_csg) {
 	// Check for face collisions and add necessary faces.
 	Build2DFaceCollection build2DFaceCollection;
 	for (int i = 0; i < p_brush_a.faces.size(); i++) {
 		for (int j = 0; j < p_brush_b.faces.size(); j++) {
 			if (p_brush_a.faces[i].aabb.intersects_inclusive(p_brush_b.faces[j].aabb)) {
-				//// print_line("HUHHUHUHU WERIRIED");
+				if(calling_csg)
+				{
+					calling_csg->emit_signal(SNAME("mesh_updated"));
+				}
 				update_faces(p_brush_a, i, p_brush_b, j, build2DFaceCollection, p_vertex_snap);
 			}
 		}

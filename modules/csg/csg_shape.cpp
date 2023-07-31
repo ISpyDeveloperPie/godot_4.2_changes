@@ -194,7 +194,6 @@ void CSGShape3D::_make_dirty(bool p_parent_removing) {
 CSGBrush *CSGShape3D::_get_brush() {
 	CSGBrushOperation bop;
 	
-	print_line("DAM BRO:	" + get_name());
 	if (dirty) {
 		if (brush) {
 			memdelete(brush);
@@ -227,16 +226,20 @@ CSGBrush *CSGShape3D::_get_brush() {
 				nn2->copy_from(*n2, child->get_transform());
 
 				CSGBrushOperation bop;
+				if (bop.is_intersecting(*n, *nn2))
+				{
+					emit_signal(SNAME("mesh_updated"));
+				}
 
 				switch (child->get_operation()) {
 					case CSGShape3D::OPERATION_UNION:
-						bop.merge_brushes(CSGBrushOperation::OPERATION_UNION, *n, *nn2, *nn, snap);
+						bop.merge_brushes(CSGBrushOperation::OPERATION_UNION, *n, *nn2, *nn, snap, child);
 						break;
 					case CSGShape3D::OPERATION_INTERSECTION:
-						bop.merge_brushes(CSGBrushOperation::OPERATION_INTERSECTION, *n, *nn2, *nn, snap);
+						bop.merge_brushes(CSGBrushOperation::OPERATION_INTERSECTION, *n, *nn2, *nn, snap, child);
 						break;
 					case CSGShape3D::OPERATION_SUBTRACTION:
-						bop.merge_brushes(CSGBrushOperation::OPERATION_SUBTRACTION, *n, *nn2, *nn, snap);
+						bop.merge_brushes(CSGBrushOperation::OPERATION_SUBTRACTION, *n, *nn2, *nn, snap, child);
 						break;
 				}
 				memdelete(n);
@@ -245,7 +248,9 @@ CSGBrush *CSGShape3D::_get_brush() {
 			}
 		}
 
-		if (n) {
+		if (is_root_shape())
+		{
+			if (n) {
 			AABB aabb;
 			for (int i = 0; i < n->faces.size(); i++) {
 				for (int j = 0; j < 3; j++) {
@@ -257,8 +262,9 @@ CSGBrush *CSGShape3D::_get_brush() {
 				}
 			}
 			node_aabb = aabb;
-		} else {
-			node_aabb = AABB();
+			} else {
+				node_aabb = AABB();
+			}
 		}
 
 		brush = n;

@@ -71,7 +71,9 @@ struct CSGBrushOperation {
 
 	bool is_intersecting(const CSGBrush &p_brush_a, const CSGBrush &p_brush_b);
 
-	void merge_brushes(Operation p_operation, const CSGBrush &p_brush_a, const CSGBrush &p_brush_b, CSGBrush &r_merged_brush, float p_vertex_snap);
+	void merge_brushes(Operation p_operation, const CSGBrush &p_brush_a, const CSGBrush &p_brush_b, CSGBrush &r_merged_brush, float p_vertex_snap, Node *calling_csg = nullptr);
+
+	//void merge_brushes(Operation p_operation, const CSGBrush &p_brush_a, const CSGBrush &p_brush_b, CSGBrush &r_merged_brush, float p_vertex_snap);
 
 	struct MeshMerge {
 		struct Face {
