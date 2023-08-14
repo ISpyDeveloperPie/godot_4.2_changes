@@ -104,7 +104,7 @@ void Node3D::_propagate_transform_changed_deferred() {
 	}
 }
 
-void Node3D::_propagate_transform_changed(Node3D *p_origin) {
+void Node3D::_propagate_transform_changed(Node3D *p_origin) { // TODO: Edit for Toggle!
 	if (!is_inside_tree()) {
 		return;
 	}
@@ -113,7 +113,10 @@ void Node3D::_propagate_transform_changed(Node3D *p_origin) {
 		if (E->data.top_level) {
 			continue; //don't propagate to a top_level
 		}
-		E->_propagate_transform_changed(p_origin);
+		print_line("Name of propagated to:	" + E->get_name());
+		if(data.propagate_transform) {
+			E->_propagate_transform_changed(p_origin);
+		}
 	}
 #ifdef TOOLS_ENABLED
 	if ((!data.gizmos.is_empty() || data.notify_transform) && !data.ignore_notification && !xform_change.in_list()) {
@@ -267,6 +270,24 @@ Vector3 Node3D::get_global_rotation_degrees() const {
 	Vector3 radians = get_global_rotation();
 	return Vector3(Math::rad_to_deg(radians.x), Math::rad_to_deg(radians.y), Math::rad_to_deg(radians.z));
 }
+
+void Node3D::set_propagate_transform(bool propagate)
+{
+	ERR_MAIN_THREAD_GUARD;
+	if(data.propagate_transform = propagate)
+	{
+		return;
+	}
+
+	data.propagate_transform = propagate;
+}
+
+bool Node3D::get_propagate_transform()
+{
+	ERR_READ_THREAD_GUARD_V(false);
+	return data.propagate_transform;
+}
+
 
 void Node3D::set_global_rotation(const Vector3 &p_euler_rad) {
 	ERR_THREAD_GUARD;
@@ -1115,6 +1136,9 @@ void Node3D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_global_rotation_degrees", "euler_degrees"), &Node3D::set_global_rotation_degrees);
 	ClassDB::bind_method(D_METHOD("get_global_rotation_degrees"), &Node3D::get_global_rotation_degrees);
 
+	ClassDB::bind_method(D_METHOD("set_propagate_transform", "propagate"), &Node3D::set_propagate_transform);
+	ClassDB::bind_method(D_METHOD("get_propagate_transform"), &Node3D::get_propagate_transform);
+
 	ClassDB::bind_method(D_METHOD("get_parent_node_3d"), &Node3D::get_parent_node_3d);
 	ClassDB::bind_method(D_METHOD("set_ignore_transform_notification", "enabled"), &Node3D::set_ignore_transform_notification);
 	ClassDB::bind_method(D_METHOD("set_as_top_level", "enable"), &Node3D::set_as_top_level);
@@ -1193,6 +1217,9 @@ void Node3D::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "global_position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE), "set_global_position", "get_global_position");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "global_rotation", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE), "set_global_rotation", "get_global_rotation");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "global_rotation_degrees", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE), "set_global_rotation_degrees", "get_global_rotation_degrees");
+
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "propagate_transform"), "set_propagate_transform", "get_propagate_transform");
+
 	ADD_GROUP("Visibility", "");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "visible"), "set_visible", "is_visible");
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "visibility_parent", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "GeometryInstance3D"), "set_visibility_parent", "get_visibility_parent");

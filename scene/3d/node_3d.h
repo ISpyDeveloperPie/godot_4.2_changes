@@ -117,6 +117,8 @@ private:
 		bool visible = true;
 		bool disable_scale = false;
 
+		bool propagate_transform = true;
+
 #ifdef TOOLS_ENABLED
 		Vector<Ref<Node3DGizmo>> gizmos;
 		bool gizmos_disabled = false;
@@ -195,6 +197,9 @@ public:
 	Vector3 get_global_position() const;
 	Vector3 get_global_rotation() const;
 	Vector3 get_global_rotation_degrees() const;
+
+	void set_propagate_transform(bool prop);
+	bool get_propagate_transform();
 
 	void set_transform(const Transform3D &p_transform);
 	void set_basis(const Basis &p_basis);
