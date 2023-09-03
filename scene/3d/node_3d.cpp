@@ -86,16 +86,62 @@ void Node3D::_notify_dirty() {
 
 void Node3D::_update_local_transform() const {
 	// This function is called when the local transform (data.local_transform) is dirty and the right value is contained in the Euler rotation and scale.
+
 	data.local_transform.basis.set_euler_scale(data.euler_rotation, data.scale, data.euler_rotation_order);
+	/*//print_line("WOWOWOWOW");
+	if (data.parent && !data.top_level) {
+			data.real_euler_rotation = (data.parent->get_global_transform() * data.local_transform).basis.get_euler();
+	}*/
+			//new_global = data.parent->get_global_transform() * data.local_transform;
+	//data.real_euler_rotation = data.euler_rotation;
+	//////print_line("WOWOWOWOW");
+
 	_clear_dirty_bits(DIRTY_LOCAL_TRANSFORM);
 }
 
 void Node3D::_update_rotation_and_scale() const {
 	// This function is called when the Euler rotation (data.euler_rotation) is dirty and the right value is contained in the local transform
+	bool other_factors = data.local_transform != data.previous_local_transform && !(data.global_transform == data.previous_global_transform);
+	/*if(get_parent())
+	{
+		if(Node3D* n_test = Object::cast_to<Node3D>(get_parent()))
+		{
+			if(!n_test->get_propagate_transform())
+			{
+				//data.scale = data.local_transform.basis.get_scale();
+				//data.euler_rotation = data.local_transform.basis.get_euler_normalized(data.euler_rotation_order);
+				////print_line("///3");
+				data.euler_rotation = n_test->get_rotation();
+			}
+			else
+			{
+				//data.scale = data.local_transform.basis.get_scale();
+				//data.euler_rotation = data.local_transform.basis.get_euler_normalized(data.euler_rotation_order);
+			}
+		}
+		else
+		{
+			//data.scale = data.local_transform.basis.get_scale();
+			//data.euler_rotation = data.local_transform.basis.get_euler_normalized(data.euler_rotation_order);
+		}
+	}
+	else
+	{
+		//data.scale = data.local_transform.basis.get_scale();
+		//data.euler_rotation = data.local_transform.basis.get_euler_normalized(data.euler_rotation_order);
+	}*/
+
 
 	data.scale = data.local_transform.basis.get_scale();
 	data.euler_rotation = data.local_transform.basis.get_euler_normalized(data.euler_rotation_order);
+
+	/*//print_line("DWOWOWOWOW");
+	if (data.parent && !data.top_level) {
+		data.euler_rotation = Vector3(0,0.785398,0);//(data.parent->get_global_transform() * data.local_transform).basis.get_euler();//
+		data.real_euler_rotation = Vector3(0,0.785398,0);//(data.parent->get_global_transform() * data.local_transform).basis.get_euler();
+	}*/
 	_clear_dirty_bits(DIRTY_EULER_ROTATION_AND_SCALE);
+	//////print_line("3");
 }
 
 void Node3D::_propagate_transform_changed_deferred() {
@@ -108,15 +154,12 @@ void Node3D::_propagate_transform_changed(Node3D *p_origin) { // TODO: Edit for 
 	if (!is_inside_tree()) {
 		return;
 	}
-
 	for (Node3D *&E : data.children) {
 		if (E->data.top_level) {
 			continue; //don't propagate to a top_level
 		}
-		print_line("Name of propagated to:	" + E->get_name());
-		if(data.propagate_transform) {
-			E->_propagate_transform_changed(p_origin);
-		}
+		//////print_line("Xform change thing3:	" + xform_change.self()->get_name());
+		E->_propagate_transform_changed(p_origin);
 	}
 #ifdef TOOLS_ENABLED
 	if ((!data.gizmos.is_empty() || data.notify_transform) && !data.ignore_notification && !xform_change.in_list()) {
@@ -130,7 +173,56 @@ void Node3D::_propagate_transform_changed(Node3D *p_origin) { // TODO: Edit for 
 			MessageQueue::get_singleton()->push_callable(callable_mp(this, &Node3D::_propagate_transform_changed_deferred));
 		}
 	}
-	_set_dirty_bits(DIRTY_GLOBAL_TRANSFORM);
+	/*if(get_parent()->is_class("Node3D"))
+	{
+		if (!Object::cast_to<Node3D>(get_parent())->data.propagate_transform)
+		{
+			////print_line("No");
+			_set_dirty_bits(DIRTY_LOCAL_TRANSFORM);
+		}
+		else
+		{
+			_set_dirty_bits(DIRTY_GLOBAL_TRANSFORM);
+		}
+	}
+	else
+	{
+		_set_dirty_bits(DIRTY_GLOBAL_TRANSFORM);
+	}*/
+	
+	/*Transform3D orig_trans = get_global_transform();
+	if(get_parent()->is_class("Node3D"))
+	{
+		if (!Object::cast_to<Node3D>(get_parent())->data.propagate_transform)
+		{
+			//set_global_transform(orig_trans);
+			data.global_transform = orig_trans;
+			//_set_dirty_bits(DIRTY_GLOBAL_TRANSFORM);
+		}
+		else
+		{
+			_set_dirty_bits(DIRTY_GLOBAL_TRANSFORM);
+		}
+	}
+	else
+	{
+		_set_dirty_bits(DIRTY_GLOBAL_TRANSFORM);
+	}*/
+	_set_dirty_bits(DIRTY_GLOBAL_TRANSFORM); // TODO HERE
+	/*if(get_parent()->is_class("Node3D"))
+	{
+		if (!Object::cast_to<Node3D>(get_parent())->data.propagate_transform)
+		{
+			set_global_transform(orig_trans);
+		}
+	}*
+	/*if(get_parent()->is_class("Node3D"))
+	{
+		if (!Object::cast_to<Node3D>(get_parent())->data.propagate_transform)
+		{
+			////print_line("2	" + get_name() + "	" + get_global_transform());
+		}
+	}*/
 }
 
 void Node3D::_notification(int p_what) {
@@ -293,6 +385,7 @@ void Node3D::set_global_rotation(const Vector3 &p_euler_rad) {
 	ERR_THREAD_GUARD;
 	Transform3D transform = get_global_transform();
 	transform.basis = Basis::from_euler(p_euler_rad);
+	data.real_euler_rotation = p_euler_rad;
 	set_global_transform(transform);
 }
 
@@ -311,6 +404,21 @@ void Node3D::set_transform(const Transform3D &p_transform) {
 	if (data.notify_local_transform) {
 		notification(NOTIFICATION_LOCAL_TRANSFORM_CHANGED);
 	}
+
+	/*if(is_inside_tree())
+	{
+		if(get_parent())
+		{
+			if(get_parent()->is_class("Node3D"))
+			{
+				if (!Object::cast_to<Node3D>(get_parent())->data.propagate_transform)
+				{
+					////print_line("" + get_name() + "	" + get_global_transform());
+				}
+			}
+		}
+	}*/
+	
 }
 
 Basis Node3D::get_basis() const {
@@ -327,8 +435,13 @@ void Node3D::set_global_transform(const Transform3D &p_transform) {
 	Transform3D xform = (data.parent && !data.top_level)
 			? data.parent->get_global_transform().affine_inverse() * p_transform
 			: p_transform;
-
 	set_transform(xform);
+	//?data.real_euler_rotation = xform.basis.get_euler();
+	data.real_euler_rotation = p_transform.basis.get_euler();
+	data.real_position = p_transform.get_origin();//xform.get_origin();
+	data.real_scale = p_transform.get_basis().get_scale();
+	//print_line("BEFORE:	" + data.real_euler_rotation);
+	//print_line("WHAT:	" + p_transform.basis.get_euler());
 }
 
 Transform3D Node3D::get_transform() const {
@@ -341,35 +454,241 @@ Transform3D Node3D::get_transform() const {
 	return data.local_transform;
 }
 
-Transform3D Node3D::get_global_transform() const {
+Transform3D Node3D::get_global_transform() const { //TODO MAYBE OVER HERE
 	ERR_FAIL_COND_V(!is_inside_tree(), Transform3D());
 
 	/* Due to how threads work at scene level, while this global transform won't be able to be changed from outside a thread,
 	 * it is possible that multiple threads can access it while it's dirty from previous work. Due to this, we must ensure that
 	 * the dirty/update process is thread safe by utilizing atomic copies.
 	 */
-
+	
 	uint32_t dirty = _read_dirty_mask();
 	if (dirty & DIRTY_GLOBAL_TRANSFORM) {
+		//////print_line("1:	" + data.scale);
+		//////print_line("glob trans.5:	" + get_name() + "	also:	" + data.euler_rotation);
+		//////print_line("AAA1:	" + get_global_rotation());
+		////print_line("Actve:	" + get_name());
 		if (dirty & DIRTY_LOCAL_TRANSFORM) {
 			_update_local_transform(); // Update local transform atomically.
 		}
-
+		//////print_line("2:	" + data.scale);
 		Transform3D new_global;
 		if (data.parent && !data.top_level) {
 			new_global = data.parent->get_global_transform() * data.local_transform;
 		} else {
 			new_global = data.local_transform;
 		}
-
+		//////print_line("3:	" + data.scale);
 		if (data.disable_scale) {
 			new_global.basis.orthonormalize();
 		}
+		//print_line("SPAWN:	" + get_name() + "	" + data.local_transform.origin);
+		//print_line("SPAWN3:	" + get_name() + "	" + data.real_position);
+		//////print_line("glob trans:	" + get_name() + "	also:	" + data.euler_rotation);
+		
+		/*if(get_parent())
+		{
+			//////print_line("NO");
+			if(Node3D* n_test = Object::cast_to<Node3D>(get_parent()))
+			{
+				if(!n_test->get_propagate_transform() && !other_factors)
+				{
+					new_global = data.local_transform;
+				}
+			}
+		}*/
+		
+		Transform3D prev_global_transform;
+		if (data.first_set_global_transform)
+		{
+			prev_global_transform = data.global_transform;
+			//print_line("TRUEEE:	");
+			//????? prev_global_transform.basis.set_euler(Vector3(0,0,0));
+		}
+		else
+		{
+			prev_global_transform = data.local_transform;
+			data.real_position = new_global.origin;
+			data.real_euler_rotation = new_global.basis.get_euler();
+			data.real_scale = new_global.get_basis().get_scale();
+			//data.real_scale = new_global.sc
+			data.first_set_global_transform = true;
+			//print_line("FALSEEEE:	");
+		}
+		//Transform3D prev_global_transform = data.global_transform;
 
-		data.global_transform = new_global;
+		//?data.global_transform = new_global;
+
+		bool other_factors = data.local_transform != data.previous_local_transform && !(data.global_transform == data.previous_global_transform);
+
+		if(get_parent())
+		{
+			if(Node3D* n_test = Object::cast_to<Node3D>(get_parent()))
+			{
+				if(!n_test->get_propagate_transform() && !other_factors)
+				{
+
+				}
+				else
+				{
+					data.global_transform = new_global;
+				}
+			}
+			else
+			{
+				data.global_transform = new_global;
+			}
+		}
+		else
+		{
+			data.global_transform = new_global;
+		}
+
+		//Transform3D prev_global_transform = new_global;
+		//bool other_factors = data.local_transform != data.previous_local_transform && !(data.global_transform == data.previous_global_transform);
+
+		if(get_parent())
+		{
+			//////print_line("NO");
+			if(Node3D* n_test = Object::cast_to<Node3D>(get_parent()))
+			{
+				if(!n_test->get_propagate_transform() && !other_factors)
+				{
+					//////print_line("DD:	" + prev_global_transform.basis.get_euler());
+					Vector3 rot = n_test->get_global_rotation();
+					//////print_line("AA:	" + prev_global_transform.basis.get_euler());
+					_set_dirty_bits(DIRTY_LOCAL_TRANSFORM);
+					//_set_dirty_bits(DIRTY_EULER_ROTATION_AND_SCALE);
+
+
+					//Vector3 intended_pos = Vector3(0,0,0);
+					prev_global_transform.origin = data.real_position;
+					//prev_global_transform.basis.set_euler(rot);
+
+
+					data.local_transform.origin = (data.parent->get_global_transform().affine_inverse() * prev_global_transform).origin;
+
+					//data.local_transform.scale(Vector3(1,1,1.1));//data.real_scale / new_global.basis.get_scale_abs());
+					data.scale = data.real_scale;
+					//data.scale = data.real_scale / n_test->get_scale();
+
+					//data.scale = data.local_transform.get_basis().get_scale();
+					//?data.euler_rotation = -rot;
+
+					//////print_line("AAA:	" + get_global_rotation());
+					//get_global_transform().get_basis().get_euler();
+
+					Vector3 intended_rot = Vector3(0,0.785398,0);
+
+
+					//data.local_transform.basis.set_euler(intended_rot);// - n_test->get_global_transform().basis.get_euler());
+					
+					//!////print_line("Cool rot:	" + rot);
+					//////print_line("1:	" + data.local_transform.basis.get_euler());
+					//float old_x = rot.x;
+					//rot.x = rot.y;
+					//rot.y = old_x;
+					//data.local_transform.basis.set_euler(rot);
+
+					//data.euler_rotation = rot;
+					//data.local_transform.rotate(Vector3(0,1,0), 0.01);
+
+					//set_rotation()
+					//data.euler_rotation = n_test->get_global_transform().basis.get_euler() - intended_rot;//n_test->get_global_transform().basis.get_euler() - intended_rot;
+					
+					//?data.local_transform.basis.set_euler(Vector3(0,0.785398,0));
+					//?////print_line("Differnece:	" + (n_test->get_global_transform().basis.get_euler() - data.local_transform.basis.get_euler()));
+
+					//data.local_transform.rotate(Vector3(0,1,0), 0.785398 - get_rotation().y );
+
+					//data.global_transform.basis.set_euler(new_global.basis.get_euler());
+					//?data.real_euler_rotation = new_global.basis.get_euler();
+
+					data.euler_rotation = data.real_euler_rotation-rot;
+					
+					data.local_transform.basis.set_euler(data.euler_rotation);
+					//data.local_transform.basis.set_euler()
+
+
+
+					////print_line("Real:	" + data.real_euler_rotation);
+					//data.global_transform.basis.set_euler(Vector3(0,0,0));
+					//data.local_transform.basis.set_euler(Vector3(0,0,0));
+				}
+				else
+				{
+					data.real_position = new_global.origin;
+				}
+			}
+		}
+
+
+		
+		//_update_rotation_and_scale();
+
+		//_clear_dirty_bits(DIRTY_EULER_ROTATION_AND_SCALE);
+
+		//data.local_transform.basis.eu
+		if (dirty & DIRTY_LOCAL_TRANSFORM) {
+			_update_local_transform(); // Update local transform atomically.
+		}
+		//////print_line("5:	" + data.scale);
+		//////print_line("2:	" + data.local_transform.basis.get_euler());
+		if(get_parent())
+		{
+			if(Node3D* n_test = Object::cast_to<Node3D>(get_parent()))
+			{
+				if(!n_test->get_propagate_transform() && !other_factors)
+				{
+
+
+					//?data.global_transform.origin = prev_global_transform.origin; // ! Something over her eonly origin
+					//////print_line("EEEE:	" + data.local_transform.basis.get_euler());
+					prev_global_transform.basis.set_euler(data.real_euler_rotation);//data.real_euler_rotation);
+					//print_line("real_scale:	" + data.real_scale);
+					//print_line("AAA:	" + data.real_euler_rotation);
+					data.global_transform = prev_global_transform;//prev_global_transform;
+					//print_line("SPAWN2:	" + get_name() + "	" + prev_global_transform.origin);
+					////print_line("DD:	" + data.local_transform.basis.get_euler());
+					////print_line("DD2:	" + new_global.basis.get_euler());
+					//?data.global_transform.basis.set_euler(data.local_transform.basis.get_euler());
+
+
+					//?data.global_transform.basis.set_euler(new_global.basis.get_euler());
+					//data.global_transform.rotate(Vector3(1,0,0), get_euler().x)
+					//data.global_transform.basis.set_euler(new_global.basis.get_euler());
+
+					//data.global_transform.basis.set_euler(Vector3(0,0.785398,0));
+
+					////print_line("prev glob rot:	" + prev_global_transform.basis.get_euler());
+					//data.global_transform = Transform3D(data.local_transform.basis, prev_global_transform.origin);
+					
+					//data.global_transform.basis.set_euler(Vector3(0,0,0));
+					//data.global_transform = prev_global_transform;
+
+					//data.global_transform.scale(Vector3(1,1,1.1));
+					//data.global_transform = data.parent->get_global_transform() * data.local_transform;;
+					//data.global_transform.rotate(Vector3(0,1,0), 0.785398 - get_rotation().y );
+				}
+			}
+		}
 		_clear_dirty_bits(DIRTY_GLOBAL_TRANSFORM);
+		//////print_line("3:	" + data.local_transform.basis.get_euler());
+		/*if(get_parent())
+		{
+			if(Node3D* n_test = Object::cast_to<Node3D>(get_parent()))
+			{
+				if(!n_test->get_propagate_transform())
+				{
+					////print_line("" + get_name() + "	trans2 global:	" + data.global_transform.affine_inverse());
+				}
+			}
+		}*/
+		//////print_line("glob trans2:	" + get_name() + "	also:	" + data.euler_rotation);
 	}
 
+	data.previous_global_transform = data.global_transform;
+	data.previous_local_transform = data.local_transform;
 	return data.global_transform;
 }
 
@@ -436,7 +755,6 @@ void Node3D::set_rotation_edit_mode(RotationEditMode p_mode) {
 
 		_update_rotation_and_scale();
 	}
-
 	if (transform_changed) {
 		_propagate_transform_changed(this);
 		if (data.notify_local_transform) {
@@ -471,7 +789,6 @@ void Node3D::set_rotation_order(EulerOrder p_order) {
 		_set_dirty_bits(DIRTY_LOCAL_TRANSFORM);
 		transform_changed = true;
 	}
-
 	data.euler_rotation_order = p_order;
 
 	if (transform_changed) {
@@ -495,8 +812,8 @@ void Node3D::set_rotation(const Vector3 &p_euler_rad) {
 		data.scale = data.local_transform.basis.get_scale();
 		_clear_dirty_bits(DIRTY_EULER_ROTATION_AND_SCALE);
 	}
-
 	data.euler_rotation = p_euler_rad;
+	data.real_euler_rotation = p_euler_rad;
 	_replace_dirty_mask(DIRTY_LOCAL_TRANSFORM);
 	_propagate_transform_changed(this);
 	if (data.notify_local_transform) {
@@ -517,8 +834,8 @@ void Node3D::set_scale(const Vector3 &p_scale) {
 		data.euler_rotation = data.local_transform.basis.get_euler_normalized(data.euler_rotation_order);
 		_clear_dirty_bits(DIRTY_EULER_ROTATION_AND_SCALE);
 	}
-
 	data.scale = p_scale;
+	data.real_scale = p_scale;
 	_replace_dirty_mask(DIRTY_LOCAL_TRANSFORM);
 	_propagate_transform_changed(this);
 	if (data.notify_local_transform) {
@@ -536,7 +853,8 @@ Vector3 Node3D::get_rotation() const {
 	if (_test_dirty_bits(DIRTY_EULER_ROTATION_AND_SCALE)) {
 		_update_rotation_and_scale();
 	}
-
+	////print_line("9:	" + get_name());
+	//////print_line("AAA:	" + get_global_rotation());
 	return data.euler_rotation;
 }
 
@@ -551,7 +869,6 @@ Vector3 Node3D::get_scale() const {
 	if (_test_dirty_bits(DIRTY_EULER_ROTATION_AND_SCALE)) {
 		_update_rotation_and_scale();
 	}
-
 	return data.scale;
 }
 
@@ -829,6 +1146,7 @@ void Node3D::rotate_object_local(const Vector3 &p_axis, real_t p_angle) {
 	ERR_THREAD_GUARD;
 	Transform3D t = get_transform();
 	t.basis.rotate_local(p_axis, p_angle);
+	//print_line("1");
 	set_transform(t);
 }
 
@@ -836,6 +1154,7 @@ void Node3D::rotate(const Vector3 &p_axis, real_t p_angle) {
 	ERR_THREAD_GUARD;
 	Transform3D t = get_transform();
 	t.basis.rotate(p_axis, p_angle);
+	//print_line("2");
 	set_transform(t);
 }
 
@@ -843,6 +1162,7 @@ void Node3D::rotate_x(real_t p_angle) {
 	ERR_THREAD_GUARD;
 	Transform3D t = get_transform();
 	t.basis.rotate(Vector3(1, 0, 0), p_angle);
+	//print_line("3");
 	set_transform(t);
 }
 
@@ -850,6 +1170,7 @@ void Node3D::rotate_y(real_t p_angle) {
 	ERR_THREAD_GUARD;
 	Transform3D t = get_transform();
 	t.basis.rotate(Vector3(0, 1, 0), p_angle);
+	//print_line("4 " + get_name());
 	set_transform(t);
 }
 
@@ -857,6 +1178,7 @@ void Node3D::rotate_z(real_t p_angle) {
 	ERR_THREAD_GUARD;
 	Transform3D t = get_transform();
 	t.basis.rotate(Vector3(0, 0, 1), p_angle);
+	//print_line("5");
 	set_transform(t);
 }
 
@@ -894,6 +1216,7 @@ void Node3D::global_rotate(const Vector3 &p_axis, real_t p_angle) {
 	ERR_THREAD_GUARD;
 	Transform3D t = get_global_transform();
 	t.basis.rotate(p_axis, p_angle);
+	//print_line("6");
 	set_global_transform(t);
 }
 
@@ -941,6 +1264,7 @@ void Node3D::look_at_from_position(const Vector3 &p_pos, const Vector3 &p_target
 	Vector3 original_scale = get_scale();
 	set_global_transform(Transform3D(lookat_basis, p_pos));
 	set_scale(original_scale);
+	//print_line("7");
 }
 
 Vector3 Node3D::to_local(Vector3 p_global) const {
@@ -982,6 +1306,7 @@ void Node3D::force_update_transform() {
 	get_tree()->xform_change_list.remove(&xform_change);
 
 	notification(NOTIFICATION_TRANSFORM_CHANGED);
+	//print_line("8");
 }
 
 void Node3D::_update_visibility_parent(bool p_update_root) {

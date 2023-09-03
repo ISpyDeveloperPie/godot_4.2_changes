@@ -193,8 +193,8 @@ void CSGShape3D::_make_dirty(bool p_parent_removing) {
 
 CSGBrush *CSGShape3D::_get_brush() {
 	CSGBrushOperation bop;
-	
 	if (dirty) {
+		//print_line("brush really dirty");
 		if (brush) {
 			memdelete(brush);
 		}
@@ -210,7 +210,7 @@ CSGBrush *CSGShape3D::_get_brush() {
 			if (!child->is_visible()) {
 				continue;
 			}
-
+			//print_line("2	"+ child->get_name() + "	ChildTranfsorm	" + child->get_transform());
 			CSGBrush *n2 = child->_get_brush();
 			if (!n2) {
 				continue;
@@ -219,17 +219,20 @@ CSGBrush *CSGShape3D::_get_brush() {
 				n = memnew(CSGBrush);
 
 				n->copy_from(*n2, child->get_transform());
+				//print_line("2	"+ child->get_name() + "	ChildTranfsorm	" + child->get_transform());
 
 			} else {
 				CSGBrush *nn = memnew(CSGBrush);
 				CSGBrush *nn2 = memnew(CSGBrush);
-				nn2->copy_from(*n2, child->get_transform());
+				nn2->copy_from(*n2, child->get_transform());//child->get_transform());
+				//print_line("NAMe oF:	" + child->get_global_transform().get_basis().get_scale());
 
 				CSGBrushOperation bop;
 				if (bop.is_intersecting(*n, *nn2))
 				{
 					emit_signal(SNAME("mesh_updated"));
 				}
+				//print_line(""+ child->get_name() + "	ChildPos	" + child->get_transform().origin);
 
 				switch (child->get_operation()) {
 					case CSGShape3D::OPERATION_UNION:
@@ -545,7 +548,7 @@ bool CSGShape3D::_is_debug_collision_shape_visible() {
 
 void CSGShape3D::_update_debug_collision_shape() {
 	// NOTE: This is called only for the root shape with collision, when root_collision_shape is valid.
-
+	print_line("debug changed:	" + get_name());
 	ERR_FAIL_NULL(RenderingServer::get_singleton());
 
 	if (root_collision_debug_instance.is_null()) {
@@ -563,13 +566,29 @@ void CSGShape3D::_clear_debug_collision_shape() {
 		RS::get_singleton()->free(root_collision_debug_instance);
 		root_collision_debug_instance = RID();
 	}
+	print_line("clear debug changed:	" + get_name());
 }
 
 void CSGShape3D::_on_transform_changed() {
 	if (root_collision_debug_instance.is_valid() && !debug_shape_old_transform.is_equal_approx(get_global_transform())) {
 		debug_shape_old_transform = get_global_transform();
 		RS::get_singleton()->instance_set_transform(root_collision_debug_instance, debug_shape_old_transform);
+		_update_debug_collision_shape();
 	}
+	if(get_parent())
+	{
+		if(CSGShape3D* parent_csg = Object::cast_to<CSGShape3D>(get_parent()))
+		{
+			if(!parent_csg->get_propagate_transform())
+			{
+				//get_global_transform();
+				_make_dirty();
+				_get_brush();
+			}
+		}
+	}
+	//_update_debug_collision_shape();
+	//print_line("Transform changed:	" + get_name());
 }
 
 AABB CSGShape3D::get_aabb() const {

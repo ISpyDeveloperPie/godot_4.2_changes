@@ -450,6 +450,7 @@ void SceneTree::initialize() {
 }
 
 bool SceneTree::physics_process(double p_time) {
+	//print_line("22222222END END END END END");
 	root_lock++;
 
 	current_frame++;
@@ -479,7 +480,6 @@ bool SceneTree::physics_process(double p_time) {
 
 	_flush_delete_queue();
 	_call_idle_callbacks();
-
 	return _quit;
 }
 

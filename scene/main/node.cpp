@@ -608,7 +608,6 @@ Node::ProcessMode Node::get_process_mode() const {
 
 void Node::_propagate_process_owner(Node *p_owner, int p_pause_notification, int p_enabled_notification) {
 	data.process_owner = p_owner;
-
 	if (p_pause_notification != 0) {
 		notification(p_pause_notification);
 	}

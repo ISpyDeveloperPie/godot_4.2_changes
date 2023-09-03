@@ -4868,6 +4868,7 @@ void Node3DEditorViewport::update_transform(bool p_shift) {
 			angle = Math::rad_to_deg(angle) + snap * 0.5; //else it won't reach +180
 			angle -= Math::fmod(angle, snap);
 			set_message(vformat(TTR("Rotating %s degrees."), String::num(angle, snap_step_decimals)));
+			print_line("PLEASE!");
 			angle = Math::deg_to_rad(angle);
 
 			bool local_coords = (spatial_editor->are_local_coords_enabled() && _edit.plane != TRANSFORM_VIEW); // Disable local transformation for TRANSFORM_VIEW
@@ -4901,7 +4902,15 @@ void Node3DEditorViewport::update_transform(bool p_shift) {
 					}
 				} else {
 					Transform3D new_xform = _compute_transform(TRANSFORM_ROTATE, se->original, se->original_local, compute_axis, angle, local_coords, sp->get_rotation_edit_mode() != Node3D::ROTATION_EDIT_MODE_BASIS);
-					_transform_gizmo_apply(se->sp, new_xform, local_coords);
+					_transform_gizmo_apply(se->sp, new_xform, local_coords); // TODO: Change this somehow for the special data.real_rot
+					if(local_coords)
+					{
+						print_line("local:	true");
+					}
+					else
+					{
+						print_line("local:	false");
+					}
 				}
 			}
 
@@ -6086,6 +6095,7 @@ void Node3DEditor::_xform_dialog_action() {
 
 	t.basis.scale(scale);
 	t.basis.rotate(rotate);
+	print_line("Interesting...");
 	t.origin = translate;
 
 	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();

@@ -92,9 +92,20 @@ private:
 	struct Data {
 		mutable Transform3D global_transform;
 		mutable Transform3D local_transform;
+
+		mutable Transform3D previous_global_transform;
+		mutable Transform3D previous_local_transform;
+
+		mutable bool first_set_global_transform = false;
+
 		mutable EulerOrder euler_rotation_order = EulerOrder::YXZ;
 		mutable Vector3 euler_rotation;
 		mutable Vector3 scale = Vector3(1, 1, 1);
+
+		mutable Vector3 real_position = Vector3(0,0,0);
+		mutable Vector3 real_scale = Vector3(1,1,1);
+		mutable Vector3 real_euler_rotation = Vector3(0,0,0);
+
 		mutable RotationEditMode rotation_edit_mode = ROTATION_EDIT_MODE_EULER;
 
 		mutable MTNumeric<uint32_t> dirty;

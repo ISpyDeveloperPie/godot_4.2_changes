@@ -59,22 +59,26 @@ Transform3D Transform3D::inverse() const {
 
 void Transform3D::rotate(const Vector3 &p_axis, real_t p_angle) {
 	*this = rotated(p_axis, p_angle);
+	WARN_PRINT("someone what");
 }
 
 Transform3D Transform3D::rotated(const Vector3 &p_axis, real_t p_angle) const {
 	// Equivalent to left multiplication
 	Basis p_basis(p_axis, p_angle);
+	WARN_PRINT("someone what");
 	return Transform3D(p_basis * basis, p_basis.xform(origin));
 }
 
 Transform3D Transform3D::rotated_local(const Vector3 &p_axis, real_t p_angle) const {
 	// Equivalent to right multiplication
 	Basis p_basis(p_axis, p_angle);
+	WARN_PRINT("someone what");
 	return Transform3D(basis * p_basis, origin);
 }
 
 void Transform3D::rotate_basis(const Vector3 &p_axis, real_t p_angle) {
 	basis.rotate(p_axis, p_angle);
+	WARN_PRINT("someone what");
 }
 
 Transform3D Transform3D::looking_at(const Vector3 &p_target, const Vector3 &p_up, bool p_use_model_front) const {

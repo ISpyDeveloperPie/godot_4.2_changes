@@ -117,6 +117,8 @@ private:
 	void _clear_debug_collision_shape();
 	void _on_transform_changed();
 
+	//virtual Transform3D get_global_transform() const override;
+
 protected:
 	void _notification(int p_what);
 	virtual CSGBrush *_build_brush() = 0;
