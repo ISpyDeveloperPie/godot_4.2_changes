@@ -35,12 +35,10 @@
 #include "core/object/class_db.h"
 #include "core/object/script_language.h"
 
-#ifdef DEBUG_ENABLED
-#include "core/config/engine.h"
-#endif
+#include <stdio.h>
 
 #ifdef DEV_ENABLED
-// Includes sanity checks to ensure that a queue set as a thread singleton override
+// Includes safety checks to ensure that a queue set as a thread singleton override
 // is only ever called from the thread it was set for.
 #define LOCK_MUTEX                                     \
 	if (this != MessageQueue::thread_singleton) {      \
@@ -97,7 +95,7 @@ Error CallQueue::push_callablep(const Callable &p_callable, const Variant **p_ar
 
 	if ((page_bytes[pages_used - 1] + room_needed) > uint32_t(PAGE_SIZE_BYTES)) {
 		if (pages_used == max_pages) {
-			ERR_PRINT("Failed method: " + p_callable + ". Message queue out of memory. " + error_text);
+			fprintf(stderr, "Failed method: %s. Message queue out of memory. %s\n", String(p_callable).utf8().get_data(), error_text.utf8().get_data());
 			statistics();
 			UNLOCK_MUTEX;
 			return ERR_OUT_OF_MEMORY;
@@ -148,7 +146,7 @@ Error CallQueue::push_set(ObjectID p_id, const StringName &p_prop, const Variant
 			if (ObjectDB::get_instance(p_id)) {
 				type = ObjectDB::get_instance(p_id)->get_class();
 			}
-			ERR_PRINT("Failed set: " + type + ":" + p_prop + " target ID: " + itos(p_id) + ". Message queue out of memory. " + error_text);
+			fprintf(stderr, "Failed set: %s: %s target ID: %s. Message queue out of memory. %s\n", type.utf8().get_data(), String(p_prop).utf8().get_data(), itos(p_id).utf8().get_data(), error_text.utf8().get_data());
 			statistics();
 
 			UNLOCK_MUTEX;
@@ -185,7 +183,7 @@ Error CallQueue::push_notification(ObjectID p_id, int p_notification) {
 
 	if ((page_bytes[pages_used - 1] + room_needed) > uint32_t(PAGE_SIZE_BYTES)) {
 		if (pages_used == max_pages) {
-			ERR_PRINT("Failed notification: " + itos(p_notification) + " target ID: " + itos(p_id) + ". Message queue out of memory. " + error_text);
+			fprintf(stderr, "Failed notification: %s target ID: %s. Message queue out of memory. %s\n", itos(p_notification).utf8().get_data(), itos(p_id).utf8().get_data(), error_text.utf8().get_data());
 			statistics();
 			UNLOCK_MUTEX;
 			return ERR_OUT_OF_MEMORY;
@@ -320,34 +318,25 @@ Error CallQueue::flush() {
 		Object *target = message->callable.get_object();
 
 		UNLOCK_MUTEX;
-#ifdef DEBUG_ENABLED
-		if (!message->callable.is_valid()) {
-			// The editor would cause many of these.
-			if (!Engine::get_singleton()->is_editor_hint()) {
-				ERR_PRINT("Trying to execute a deferred call/notification/set on a previously freed instance. Consider using queue_free() instead of free().");
-			}
-		} else
-#endif
-		{
-			switch (message->type & FLAG_MASK) {
-				case TYPE_CALL: {
-					if (target || (message->type & FLAG_NULL_IS_OK)) {
-						Variant *args = (Variant *)(message + 1);
-						_call_function(message->callable, args, message->args, message->type & FLAG_SHOW_ERROR);
-					}
-				} break;
-				case TYPE_NOTIFICATION: {
-					if (target) {
-						target->notification(message->notification);
-					}
-				} break;
-				case TYPE_SET: {
-					if (target) {
-						Variant *arg = (Variant *)(message + 1);
-						target->set(message->callable.get_method(), *arg);
-					}
-				} break;
-			}
+
+		switch (message->type & FLAG_MASK) {
+			case TYPE_CALL: {
+				if (target || (message->type & FLAG_NULL_IS_OK)) {
+					Variant *args = (Variant *)(message + 1);
+					_call_function(message->callable, args, message->args, message->type & FLAG_SHOW_ERROR);
+				}
+			} break;
+			case TYPE_NOTIFICATION: {
+				if (target) {
+					target->notification(message->notification);
+				}
+			} break;
+			case TYPE_SET: {
+				if (target) {
+					Variant *arg = (Variant *)(message + 1);
+					target->set(message->callable.get_method(), *arg);
+				}
+			} break;
 		}
 
 		if ((message->type & FLAG_MASK) != TYPE_NOTIFICATION) {
@@ -550,7 +539,7 @@ CallQueue::~CallQueue() {
 	if (!allocator_is_custom) {
 		memdelete(allocator);
 	}
-	// This is done here to avoid a circular dependency between the sanity checks and the thread singleton pointer.
+	// This is done here to avoid a circular dependency between the safety checks and the thread singleton pointer.
 	if (this == MessageQueue::thread_singleton) {
 		MessageQueue::thread_singleton = nullptr;
 	}

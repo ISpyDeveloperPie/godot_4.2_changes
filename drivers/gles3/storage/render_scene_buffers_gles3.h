@@ -35,12 +35,7 @@
 
 #include "servers/rendering/storage/render_scene_buffers.h"
 
-#include "platform_config.h"
-#ifndef OPENGL_INCLUDE_H
-#include <GLES3/gl3.h>
-#else
-#include OPENGL_INCLUDE_H
-#endif
+#include "platform_gl.h"
 
 class RenderSceneBuffersGLES3 : public RenderSceneBuffers {
 	GDCLASS(RenderSceneBuffersGLES3, RenderSceneBuffers);
@@ -57,8 +52,6 @@ public:
 	//RS::ViewportScreenSpaceAA screen_space_aa = RS::VIEWPORT_SCREEN_SPACE_AA_DISABLED;
 	//bool use_debanding = false;
 	uint32_t view_count = 1;
-
-	bool is_transparent = false;
 
 	RID render_target;
 

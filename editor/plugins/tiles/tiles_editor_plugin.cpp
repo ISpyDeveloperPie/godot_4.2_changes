@@ -38,7 +38,7 @@
 #include "editor/editor_node.h"
 #include "editor/editor_scale.h"
 #include "editor/editor_settings.h"
-#include "editor/inspector_dock.h"
+#include "editor/editor_string_names.h"
 #include "editor/plugins/canvas_item_editor_plugin.h"
 
 #include "scene/2d/tile_map.h"
@@ -50,7 +50,8 @@
 #include "scene/resources/tile_set.h"
 
 TilesEditorUtils *TilesEditorUtils::singleton = nullptr;
-TileMapEditorPlugin *local_singleton = nullptr;
+TileMapEditorPlugin *tile_map_plugin_singleton = nullptr;
+TileSetEditorPlugin *tile_set_plugin_singleton = nullptr;
 
 void TilesEditorUtils::_preview_frame_started() {
 	RS::get_singleton()->request_frame_drawn_callback(callable_mp(const_cast<TilesEditorUtils *>(this), &TilesEditorUtils::_pattern_preview_done));
@@ -133,11 +134,7 @@ void TilesEditorUtils::_thread() {
 				Ref<Image> image = viewport->get_texture()->get_image();
 
 				// Find the index for the given pattern. TODO: optimize.
-				Variant args[] = { item.pattern, ImageTexture::create_from_image(image) };
-				const Variant *args_ptr[] = { &args[0], &args[1] };
-				Variant r;
-				Callable::CallError error;
-				item.callback.callp(args_ptr, 2, r, error);
+				item.callback.call(item.pattern, ImageTexture::create_from_image(image));
 
 				viewport->queue_free();
 			}
@@ -163,8 +160,8 @@ void TilesEditorUtils::set_sources_lists_current(int p_current) {
 void TilesEditorUtils::synchronize_sources_list(Object *p_current_list, Object *p_current_sort_button) {
 	ItemList *item_list = Object::cast_to<ItemList>(p_current_list);
 	MenuButton *sorting_button = Object::cast_to<MenuButton>(p_current_sort_button);
-	ERR_FAIL_COND(!item_list);
-	ERR_FAIL_COND(!sorting_button);
+	ERR_FAIL_NULL(item_list);
+	ERR_FAIL_NULL(sorting_button);
 
 	if (sorting_button->is_visible_in_tree()) {
 		for (int i = 0; i != SOURCE_SORT_MAX; i++) {
@@ -195,7 +192,7 @@ void TilesEditorUtils::set_atlas_view_transform(float p_zoom, Vector2 p_scroll) 
 
 void TilesEditorUtils::synchronize_atlas_view(Object *p_current) {
 	TileAtlasView *tile_atlas_view = Object::cast_to<TileAtlasView>(p_current);
-	ERR_FAIL_COND(!tile_atlas_view);
+	ERR_FAIL_NULL(tile_atlas_view);
 
 	if (tile_atlas_view->is_visible_in_tree()) {
 		tile_atlas_view->set_transform(atlas_view_zoom, atlas_view_scroll);
@@ -283,11 +280,18 @@ bool TilesEditorUtils::SourceNameComparator::operator()(const int &p_a, const in
 	return NaturalNoCaseComparator()(name_a, name_b);
 }
 
+void TilesEditorUtils::display_tile_set_editor_panel() {
+	tile_map_plugin_singleton->hide_editor();
+	tile_set_plugin_singleton->make_visible(true);
+}
+
 void TilesEditorUtils::draw_selection_rect(CanvasItem *p_ci, const Rect2 &p_rect, const Color &p_color) {
+	Ref<Texture2D> selection_texture = EditorNode::get_singleton()->get_editor_theme()->get_icon(SNAME("TileSelection"), EditorStringName(EditorIcons));
+
 	real_t scale = p_ci->get_global_transform().get_scale().x * 0.5;
 	p_ci->draw_set_transform(p_rect.position, 0, Vector2(1, 1) / scale);
 	RS::get_singleton()->canvas_item_add_nine_patch(
-			p_ci->get_canvas_item(), Rect2(Vector2(), p_rect.size * scale), Rect2(), EditorNode::get_singleton()->get_gui_base()->get_theme_icon(SNAME("TileSelection"), SNAME("EditorIcons"))->get_rid(),
+			p_ci->get_canvas_item(), Rect2(Vector2(), p_rect.size * scale), Rect2(), selection_texture->get_rid(),
 			Vector2(2, 2), Vector2(2, 2), RS::NINE_PATCH_STRETCH, RS::NINE_PATCH_STRETCH, false, p_color);
 	p_ci->draw_set_transform_matrix(Transform2D());
 }
@@ -320,8 +324,18 @@ void TileMapEditorPlugin::_tile_map_changed() {
 }
 
 void TileMapEditorPlugin::_update_tile_map() {
-	if (tile_map && tile_map->get_tileset().is_valid()) {
-		EditorNode::get_singleton()->edit_item(tile_map->get_tileset().ptr(), InspectorDock::get_inspector_singleton());
+	TileMap *tile_map = Object::cast_to<TileMap>(ObjectDB::get_instance(tile_map_id));
+	if (tile_map) {
+		Ref<TileSet> tile_set = tile_map->get_tileset();
+		if (tile_set.is_valid() && edited_tileset != tile_set->get_instance_id()) {
+			tile_set_plugin_singleton->edit(tile_map->get_tileset().ptr());
+			tile_set_plugin_singleton->make_visible(true);
+			edited_tileset = tile_set->get_instance_id();
+		} else if (tile_set.is_null()) {
+			tile_set_plugin_singleton->edit(nullptr);
+			tile_set_plugin_singleton->make_visible(false);
+			edited_tileset = ObjectID();
+		}
 	}
 	tile_map_changed_needs_update = false;
 }
@@ -333,19 +347,34 @@ void TileMapEditorPlugin::_notification(int p_notification) {
 }
 
 void TileMapEditorPlugin::edit(Object *p_object) {
+	TileMap *tile_map = Object::cast_to<TileMap>(ObjectDB::get_instance(tile_map_id));
 	if (tile_map) {
 		tile_map->disconnect("changed", callable_mp(this, &TileMapEditorPlugin::_tile_map_changed));
 	}
 
 	tile_map = Object::cast_to<TileMap>(p_object);
+	if (tile_map) {
+		tile_map_id = tile_map->get_instance_id();
+	} else {
+		tile_map_id = ObjectID();
+	}
 
 	editor->edit(tile_map);
 	if (tile_map) {
 		tile_map->connect("changed", callable_mp(this, &TileMapEditorPlugin::_tile_map_changed));
 
 		if (tile_map->get_tileset().is_valid()) {
-			EditorNode::get_singleton()->edit_item(tile_map->get_tileset().ptr(), InspectorDock::get_inspector_singleton());
+			tile_set_plugin_singleton->edit(tile_map->get_tileset().ptr());
+			tile_set_plugin_singleton->make_visible(true);
+			edited_tileset = tile_map->get_tileset()->get_instance_id();
 		}
+	} else if (edited_tileset.is_valid()) {
+		// Hide the TileSet editor, unless another TileSet is being edited.
+		if (tile_set_plugin_singleton->get_edited_tileset() == edited_tileset) {
+			tile_set_plugin_singleton->edit(nullptr);
+			tile_set_plugin_singleton->make_visible(false);
+		}
+		edited_tileset = ObjectID();
 	}
 }
 
@@ -373,13 +402,21 @@ void TileMapEditorPlugin::forward_canvas_draw_over_viewport(Control *p_overlay) 
 	editor->forward_canvas_draw_over_viewport(p_overlay);
 }
 
+void TileMapEditorPlugin::hide_editor() {
+	if (editor->is_visible_in_tree()) {
+		EditorNode::get_singleton()->hide_bottom_panel();
+	}
+}
+
 bool TileMapEditorPlugin::is_editor_visible() const {
 	return editor->is_visible_in_tree();
 }
 
 TileMapEditorPlugin::TileMapEditorPlugin() {
-	memnew(TilesEditorUtils);
-	local_singleton = this;
+	if (!TilesEditorUtils::get_singleton()) {
+		memnew(TilesEditorUtils);
+	}
+	tile_map_plugin_singleton = this;
 
 	editor = memnew(TileMapEditor);
 	editor->set_h_size_flags(Control::SIZE_EXPAND_FILL);
@@ -392,11 +429,16 @@ TileMapEditorPlugin::TileMapEditorPlugin() {
 }
 
 TileMapEditorPlugin::~TileMapEditorPlugin() {
-	local_singleton = nullptr;
+	tile_map_plugin_singleton = nullptr;
 }
 
 void TileSetEditorPlugin::edit(Object *p_object) {
 	editor->edit(Ref<TileSet>(p_object));
+	if (p_object) {
+		edited_tileset = p_object->get_instance_id();
+	} else {
+		edited_tileset = ObjectID();
+	}
 }
 
 bool TileSetEditorPlugin::handles(Object *p_object) const {
@@ -406,7 +448,7 @@ bool TileSetEditorPlugin::handles(Object *p_object) const {
 void TileSetEditorPlugin::make_visible(bool p_visible) {
 	if (p_visible) {
 		button->show();
-		if (!local_singleton->is_editor_visible()) {
+		if (!tile_map_plugin_singleton->is_editor_visible()) {
 			EditorNode::get_singleton()->make_bottom_panel_item_visible(editor);
 		}
 	} else {
@@ -417,8 +459,15 @@ void TileSetEditorPlugin::make_visible(bool p_visible) {
 	}
 }
 
+ObjectID TileSetEditorPlugin::get_edited_tileset() const {
+	return edited_tileset;
+}
+
 TileSetEditorPlugin::TileSetEditorPlugin() {
-	DEV_ASSERT(local_singleton);
+	if (!TilesEditorUtils::get_singleton()) {
+		memnew(TilesEditorUtils);
+	}
+	tile_set_plugin_singleton = this;
 
 	editor = memnew(TileSetEditor);
 	editor->set_h_size_flags(Control::SIZE_EXPAND_FILL);
@@ -428,4 +477,8 @@ TileSetEditorPlugin::TileSetEditorPlugin() {
 
 	button = EditorNode::get_singleton()->add_bottom_panel_item(TTR("TileSet"), editor);
 	button->hide();
+}
+
+TileSetEditorPlugin::~TileSetEditorPlugin() {
+	tile_set_plugin_singleton = nullptr;
 }

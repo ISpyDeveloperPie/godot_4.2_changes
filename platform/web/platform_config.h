@@ -28,6 +28,4 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#include <malloc.h>
-
-#define OPENGL_INCLUDE_H "platform/web/godot_webgl2.h"
+#include <alloca.h>
